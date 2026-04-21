@@ -182,7 +182,7 @@ export const updateProfile = catchAsyncError(async(req, res, next) =>{
     return next(new ErrorHandler("Name and email cannot be empty.", 400));
    }
    let avatarData= {};
-   if(req.files && req.file.avatar){
+   if(req.files && req.files.avatar){
     const {avatar} = req.files;
     if(req.user?.avatar?.public_id){
         await cloudinary.uploader.destroy(req.user.avatar.public_id);
@@ -199,5 +199,21 @@ export const updateProfile = catchAsyncError(async(req, res, next) =>{
     }
 
     let user;
+    if(Object.keys(avatarData).length === 0){
+        user = await database.query(
+            "UPDATE users SET name = $1, email = $2 WHERE id = $3 RETURNING *",
+            [name, email, req.user.id]
+        )
+    }else{
+        user = await database.query(
+            "UPDATE users SET name = $1, email = $2, avatar = $3 Where id = $4 Returning *",
+            [name, email, avatarData, req.user.id]
+        );
+    }
    
+    res.status(200).json({
+        success: true,
+        message: "Profile updated successfully.",
+        user: user.rows[0],
+    });
 })
