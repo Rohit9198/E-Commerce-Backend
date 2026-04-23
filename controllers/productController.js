@@ -360,13 +360,13 @@ export const deleteReview = catchAsyncError(async(req, res, next) =>{
 });
 
 export const fetchAIFilteredProducts = catchAsyncError(async(req, res, next) =>{
-    const { userPrompt } = req.params;
+    const { userPrompt } = req.body;
 
     if(!userPrompt){
         return next(new ErrorHandler("Provide a vaild prompt.", 400));
     }
     const filterKeywords = (query) => {
-        const stopWords = new set([
+        const stopWords = new Set([
         "the",
         "they",
         "them",
@@ -446,7 +446,7 @@ export const fetchAIFilteredProducts = catchAsyncError(async(req, res, next) =>{
         ]);
 
         return query
-        .toLowercase()
+        .toLowerCase()
         .replace(/[^\w\s]/g, "")
         .split(/\s+/)
         .filter(word => !stopWords.has(word))
@@ -459,7 +459,7 @@ export const fetchAIFilteredProducts = catchAsyncError(async(req, res, next) =>{
     const result = await database.query(`
         SELECT * FROM products
         WHERE name ILIKE ANY($1)
-        OR description ILIKE ANY ($1)
+        OR description ILIKE ANY($1)
         OR category ILIKE ANY($1)
         LIMIT 200;
         `,

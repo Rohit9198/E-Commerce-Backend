@@ -7,7 +7,7 @@ import {
   fetchSingleProduct,
   postProductReview,
   deleteReview,
-//   fetchAIFilteredProducts,
+  fetchAIFilteredProducts,
 } from "../controllers/productController.js";
 import {
   authorizedRoles,
@@ -38,6 +38,6 @@ router.delete(
   authorizedRoles("Admin"),
   deleteProduct
 );
-//router.post("/ai-search", isAuthenticated, fetchAIFilteredProducts);
+router.post("/ai-search", isAuthenticated, fetchAIFilteredProducts);
 
 export default router;
