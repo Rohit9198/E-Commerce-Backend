@@ -8,8 +8,8 @@ import { errorMiddleware } from "./middlewares/errorMiddleware.js";
 import authRouter from "./router/authRoutes.js";
 import productRouter from "./router/productRoutes.js";
 import adminRouter from "./router/adminRoutes.js";
-//import razorpay from "razorpay";
-//import databse from "./databse/db.js";
+import orderRouter from "./router/orderRoutes.js";
+import database from "./database/db.js";
 
 const app = express();
 
@@ -29,17 +29,14 @@ app.post("/api/v1/payment/webhook",
         const sig = req.headers["razorpay-signature"];
         let event;
         try{
-           event = razporpay.webhooks.constructEvent(req.body,
-            sig,
-            process.env.RAZORPAY_WEBHOOK_SECRET
-           );
+           event = JSON.parse(req.body.toString());
         }catch(error){
            return res.status(400).send(`webhook Error: ${error.message || error}`);
         }
 
         //Handling the event
 
-        if(event.type === "payment_intent.succeeded"){
+        if(event && event.type === "payment_intent.succeeded"){
             const paymentIntent_client_secret = event.data.object.client_secret;
             try{
               // Finding and updated payment
@@ -47,12 +44,12 @@ app.post("/api/v1/payment/webhook",
               const paymentTableUpdateResult = await database.query(`UPDATE payments SET payment_status = $1
                 WHERE payment_intent_id = $2 RETURNING *`,[updatedPaymentStatus, paymentIntent_client_secret]
             );
-             await database.query(`UPDATE orders SET paid_at = NOW() WHERE id = $! RETURNING *`,
+             await database.query(`UPDATE orders SET paid_at = NOW() WHERE id = $1 RETURNING *`,
                 [paymentTableUpdateResult.rows[0].order_id]
             );
 
             //Reduce stock for each Product
-            const orderId = paymentTableUpdateResult.rows[0].roder_id;
+            const orderId = paymentTableUpdateResult.rows[0].order_id;
             const {rows: orderedItems} = await database.query(`
                 SELECT product_id, quantity FROM order_items WHERE order_id = $1
                 `,[orderId]
@@ -89,6 +86,7 @@ app.use(
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/product", productRouter);
 app.use("/api/v1/admin", adminRouter);
+app.use("/api/v1/order", orderRouter);
 
 createTables();
 

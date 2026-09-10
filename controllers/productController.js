@@ -36,7 +36,7 @@ export const createProduct = catchAsyncError(async (req, res, next) => {
     const product = await database.query(
         `INSERT INTO products (name, description, price, category, stock, images, created_by)
          VALUES($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-        [name, description, price/92.68, category, stock, JSON.stringify(uploadedImages), created_by]
+        [name, description, price, category, stock, JSON.stringify(uploadedImages), created_by]
     );
 
     res.status(201).json({
@@ -67,11 +67,11 @@ export const fetchAllProducts = catchAsyncError(async(req, res, next) =>{
     }else if(availability === "out-of-stock"){
         conditions.push(`stock = 0`);
     }
-     // Filter products by price
+    // Filter products by price
     if(price){
         const [minPrice, maxPrice] = price.split("-");
         if(minPrice && maxPrice){
-            conditions.push(`price Between $${index} AND $${index + 1}`);
+            conditions.push(`price BETWEEN $${index} AND $${index + 1}`);
             values.push(minPrice, maxPrice);
             index += 2;
         }
@@ -96,7 +96,7 @@ export const fetchAllProducts = catchAsyncError(async(req, res, next) =>{
         index++;
     }
 
-    const whereClause = conditions.length? `WHERE ${conditions.join("AND")}`
+    const whereClause = conditions.length? `WHERE ${conditions.join(" AND ")}`
     : " ";
 
     //Get count of filterd products
@@ -179,7 +179,7 @@ export const updateProduct = catchAsyncError(async (req, res, next) =>{
     const result = await database.query(
         `UPDATE products SET name = $1, description = $2, price = $3, category = $4, stock = $5 WHERE id = $6
         RETURNING *`,
-        [name, description, price / 92, category, stock, productId]
+        [name, description, price, category, stock, productId]
     );
     res.status(200).json({
         success: true,
