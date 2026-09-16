@@ -2,6 +2,20 @@ import database from "../database/db.js";
 
 const sampleProducts = [
   {
+    name: "Smart Fitness Running Shoes",
+    description: "Lightweight breathable running sneakers with responsive cushioning, ergonomic heel support, and non-slip rubber traction sole.",
+    price: 119.00,
+    category: "Sports",
+    ratings: 4.7,
+    stock: 22,
+    images: [
+      {
+        url: "https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?w=800",
+        public_id: "seed_shoes_main",
+      },
+    ],
+  },
+  {
     name: "Wireless Noise-Canceling Headphones",
     description: "Premium over-ear wireless headphones with active noise cancellation, 30-hour battery life, and crystal clear sound.",
     price: 199.99,
@@ -11,7 +25,7 @@ const sampleProducts = [
     images: [
       {
         url: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800",
-        public_id: "seed_headphones",
+        public_id: "seed_headphones_main",
       },
     ],
   },
@@ -25,7 +39,7 @@ const sampleProducts = [
     images: [
       {
         url: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800",
-        public_id: "seed_watch",
+        public_id: "seed_watch_main",
       },
     ],
   },
@@ -39,7 +53,7 @@ const sampleProducts = [
     images: [
       {
         url: "https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=800",
-        public_id: "seed_keyboard",
+        public_id: "seed_keyboard_main",
       },
     ],
   },
@@ -53,7 +67,7 @@ const sampleProducts = [
     images: [
       {
         url: "https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=800",
-        public_id: "seed_serum",
+        public_id: "seed_serum_main",
       },
     ],
   },
@@ -67,21 +81,7 @@ const sampleProducts = [
     images: [
       {
         url: "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=800",
-        public_id: "seed_mugs",
-      },
-    ],
-  },
-  {
-    name: "Smart Fitness Running Shoes",
-    description: "Lightweight breathable running sneakers with responsive cushioning and non-slip rubber traction sole.",
-    price: 119.00,
-    category: "Sports",
-    ratings: 4.7,
-    stock: 22,
-    images: [
-      {
-        url: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800",
-        public_id: "seed_shoes",
+        public_id: "seed_mugs_main",
       },
     ],
   },
@@ -95,7 +95,7 @@ const sampleProducts = [
     images: [
       {
         url: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800",
-        public_id: "seed_dashcam",
+        public_id: "seed_dashcam_porsche",
       },
     ],
   },
@@ -109,7 +109,7 @@ const sampleProducts = [
     images: [
       {
         url: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=800",
-        public_id: "seed_book",
+        public_id: "seed_book_main",
       },
     ],
   },
@@ -123,7 +123,7 @@ const sampleProducts = [
     images: [
       {
         url: "https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=800",
-        public_id: "seed_baby",
+        public_id: "seed_baby_main",
       },
     ],
   },
@@ -168,11 +168,22 @@ async function seedProducts() {
         );
         console.log("+ Added product:", prod.name);
       } else {
-        console.log("- Product already exists:", prod.name);
+        await database.query(
+          "UPDATE products SET images = $1, description = $2, price = $3, stock = $4, ratings = $5 WHERE name = $6",
+          [
+            JSON.stringify(prod.images),
+            prod.description,
+            prod.price,
+            prod.stock,
+            prod.ratings,
+            prod.name,
+          ]
+        );
+        console.log("✓ Updated product images for:", prod.name);
       }
     }
 
-    console.log("Seed completed successfully!");
+    console.log("Seed & Image update completed successfully!");
     process.exit(0);
   } catch (error) {
     console.error("Seed failed:", error);

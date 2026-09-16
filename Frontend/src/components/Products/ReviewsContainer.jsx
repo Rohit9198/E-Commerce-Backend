@@ -1,122 +1,160 @@
-import { Star } from "lucide-react";
 import React, { useState } from "react";
+import { Star, Trash2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
+import { postReview, deleteReview } from "../../store/slices/productSlice";
 
 const ReviewsContainer = ({ product, productReviews }) => {
-  const {authUser} = useSelector((state) => state.auth);
-  const {isReviewDeleting, isPostingReview} = useSelector((state) => state.product);
+  const { authUser } = useSelector((state) => state.auth);
+  const { isReviewDeleting, isPostingReview } = useSelector((state) => state.product);
 
   const dispatch = useDispatch();
 
-  const [rating, setRating] = useState(1);
+  const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
 
   const handleReviewSubmit = (e) => {
     e.preventDefault();
-    const data = new FormData();
-    data.append("rating", rating);
-    data.append("comment", comment);
-    dispatch(postReview({productId: product.id, review: data}));
-  }
-  return <>
-  {
-    authUser && (
-      <form onSubmit={handleReviewSubmit} className="mb-8 space-y-4">
-        <h4 className="text-lg font-semibold">Leave a Review</h4>
-        <div className="flex items-center space-x-2">
-          {
-            [...Array(5)].map((_,i) => {
-              return (
-                <button key={i} type="button" onClick={() => setRating(i+1)} className={`text-2xl ${
-                  i < rating ? "text-yellow-400" : "text-gray-300"
-                }`}
-              >☆</button>
-              )
-            })
-          }
-        </div>
-        <textarea value={comment}
-         onChange={(e) => setComment(e.target.value)}
-         rows={4}
-         placeholder="write your review..."
-         className="w-full p-3 rounded-md border-border bg-background text-foreground"/>
-        <button
-         type="submit"
-         disabled={isPostingReview}
-         className="px-6 py-2 rounded-lg bg-primary text-white font-semibold hover:glow-on-hover
-         animamte-smooth disabled:opacity-50"
-        >
-          {isPostingReview ? "Submitting..." : "Submit Review"}
-        </button>
-      </form>
-    )
-  }
+    if (!comment.trim()) return;
+    dispatch(
+      postReview({
+        productId: product.id || product._id,
+        review: { rating, comment },
+      })
+    );
+    setComment("");
+    setRating(5);
+  };
 
-  <h3 className="text-xl font-semibold text-foreground mb-6">Customer Review</h3>
-  {
-    productReviews && productReviews.length > 0 ? (
-      <div className="space-y-6">
-        {
-          productReviews.map(review => {
-            return (
-              <div key={review.review_id} className="glass-card p-6">
-                <div className="flex items-center space-x-4">
-                  <img src={review.reviewer?.avatar?.url || "/avatar-holder.avif"} alt="{review?.reviewer?.name}
-                  className="w-12 h-12 rounded-full text-foreground
-                />
-                <div className="flex-1">
-                  <div className="flex items-center space-x-4 mb-2">
-                    <h4 className="font-semibold text-foreground">{review?.reviewer?.name}</h4>
-                    <div className="flex">
-                      {[...Array(5)].map((_,i) => {
-                        return(
-                          <Star
-                          key={i}
-                          className={`w-4 h-4 ${
-                            i< Math.floor(product.ratings)
-                            ? "text-yellow-400 fill-current"
-                            :" text-gray-300"
-                            }`}
-                          />
-                        );
-                      })}
+  const handleDelete = (reviewId) => {
+    dispatch(
+      deleteReview({
+        productId: product.id || product._id,
+        reviewId,
+      })
+    );
+  };
+
+  const reviewsList = productReviews || product?.reviews || [];
+
+  return (
+    <div className="space-y-8">
+      {authUser ? (
+        <form onSubmit={handleReviewSubmit} className="glass-card p-6 space-y-4">
+          <h4 className="text-lg font-semibold text-foreground">Leave a Review</h4>
+          <div>
+            <label className="block text-sm text-muted-foreground mb-2">Rating</label>
+            <div className="flex items-center space-x-1">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  type="button"
+                  onClick={() => setRating(star)}
+                  className="p-1 hover:scale-110 transition-transform"
+                >
+                  <Star
+                    className={`w-6 h-6 ${
+                      star <= rating
+                        ? "text-yellow-400 fill-current"
+                        : "text-gray-400"
+                    }`}
+                  />
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm text-muted-foreground mb-2">Your Review</label>
+            <textarea
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              rows={4}
+              placeholder="Write your review here..."
+              required
+              className="w-full p-3 rounded-xl border border-border bg-secondary text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={isPostingReview || !comment.trim()}
+            className="px-6 py-2.5 rounded-xl bg-primary text-primary-foreground font-semibold hover:glow-on-hover transition-all disabled:opacity-50"
+          >
+            {isPostingReview ? "Submitting..." : "Submit Review"}
+          </button>
+        </form>
+      ) : (
+        <div className="glass-card p-4 text-center text-muted-foreground">
+          <p>Please log in to leave a review.</p>
+        </div>
+      )}
+
+      <div>
+        <h3 className="text-xl font-semibold text-foreground mb-6">
+          Customer Reviews ({reviewsList.length})
+        </h3>
+        {reviewsList.length > 0 ? (
+          <div className="space-y-4">
+            {reviewsList.map((review) => {
+              const reviewRating = Number(review.rating) || 0;
+              const isOwner =
+                authUser &&
+                (String(authUser.id) === String(review.reviewer?.id) ||
+                  String(authUser.id) === String(review.user_id));
+
+              return (
+                <div key={review.review_id || review.id} className="glass-card p-6">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center space-x-4 mb-3">
+                      <img
+                        src={review.reviewer?.avatar?.url || "/avatar-holder.avif"}
+                        alt={review.reviewer?.name || "Reviewer"}
+                        className="w-10 h-10 rounded-full object-cover border border-border"
+                      />
+                      <div>
+                        <h4 className="font-semibold text-foreground">
+                          {review.reviewer?.name || "Anonymous User"}
+                        </h4>
+                        <div className="flex items-center space-x-0.5 mt-0.5">
+                          {[...Array(5)].map((_, i) => (
+                            <Star
+                              key={i}
+                              className={`w-3.5 h-3.5 ${
+                                i < reviewRating
+                                  ? "text-yellow-400 fill-current"
+                                  : "text-gray-400"
+                              }`}
+                            />
+                          ))}
+                        </div>
+                      </div>
                     </div>
+
+                    {isOwner && (
+                      <button
+                        onClick={() => handleDelete(review.review_id || review.id)}
+                        disabled={isReviewDeleting}
+                        className="p-2 text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
+                        title="Delete Review"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
 
-                    <p className="text-muted-foreground mb-2">{review.comment}</p>
-                    {
-                      authUser ?.id === review.reviewer?.id && (
-                        <button
-                        onClick={() => 
-                          dispatch(deleteReview(product.id, review.review_id))
-                        }
-                        className="my-6 w-fit flex items-center space-x-3 p-3 rounded-lg glass-card
-                        hover:glow-on-hover text-destructive hover:text-destructive-foreground group"
-                        >{isReviewDeleting ? (
-                          <>
-                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full
-                          animate-spin"/>{" "}
-                          <span>Deleting Review...</span>
-                          </>
-                        ):(
-                          <span>Delete Review</span>
-                        )}</button>
-                      )
-                    }
-
+                  <p className="text-muted-foreground text-sm leading-relaxed">
+                    {review.comment}
+                  </p>
                 </div>
-                </div>
-              </div>
-            )
-          })
-        }
-
+              );
+            })}
+          </div>
+        ) : (
+          <div className="glass-card p-8 text-center text-muted-foreground">
+            <p>No reviews yet. Be the first to review this product!</p>
+          </div>
+        )}
       </div>
-    ):(
-      <p className="text-muted-foreground">No reviews yet. Be the first ont ot review this product</p>
-    )
-  }
-  </>;
+    </div>
+  );
 };
 
 export default ReviewsContainer;
