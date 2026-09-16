@@ -359,10 +359,10 @@ export const deleteReview = catchAsyncError(async(req, res, next) =>{
 });
 
 export const fetchAIFilteredProducts = catchAsyncError(async(req, res, next) =>{
-    const { userPrompt } = req.body;
+    const userPrompt = req.body.userPrompt || req.body.prompt;
 
-    if(!userPrompt){
-        return next(new ErrorHandler("Provide a vaild prompt.", 400));
+    if(!userPrompt || typeof userPrompt !== "string" || !userPrompt.trim()){
+        return next(new ErrorHandler("Provide a valid prompt.", 400));
     }
     const filterKeywords = (query) => {
         const stopWords = new Set([
@@ -453,35 +453,50 @@ export const fetchAIFilteredProducts = catchAsyncError(async(req, res, next) =>{
     };
 
     const keywords = filterKeywords(userPrompt);
-    // STEP:1 Basic SQL Filtering
+    let candidateProducts = [];
 
-    const result = await database.query(`
-        SELECT * FROM products
-        WHERE name ILIKE ANY($1)
-        OR description ILIKE ANY($1)
-        OR category ILIKE ANY($1)
-        LIMIT 200;
-        `,
-        [keywords]);
+    if (keywords.length > 0) {
+      const result = await database.query(
+        `SELECT * FROM products
+         WHERE name ILIKE ANY($1)
+         OR description ILIKE ANY($1)
+         OR category ILIKE ANY($1)
+         LIMIT 200;`,
+        [keywords]
+      );
+      candidateProducts = result.rows;
+    }
 
-       const filteredProducts = result.rows;
-       
-       if(filteredProducts.length === 0){
-        return res.status(200).json({
-            success: true,
-            message: "No products found matching your prompt.",
-            products: [],
-        });
-       }
+    // If keyword matching didn't find anything, load products so AI can evaluate semantically
+    if (candidateProducts.length === 0) {
+      const allProdResult = await database.query(
+        `SELECT * FROM products
+         ORDER BY ratings DESC, created_at DESC
+         LIMIT 50;`
+      );
+      candidateProducts = allProdResult.rows;
+    }
 
-       //STEP 2: AT FILTERING
+    if (candidateProducts.length === 0) {
+      return res.status(200).json({
+        success: true,
+        message: "No products found matching your prompt.",
+        products: [],
+      });
+    }
 
-       const {success, products} = await getAIRecommendation(req, res, userPrompt, filteredProducts)
+    // STEP 2: AI FILTERING & RANKING
+    const { success, products } = await getAIRecommendation(
+      req,
+      res,
+      userPrompt,
+      candidateProducts
+    );
 
-       res.status(200).json({
-        success: success,
-        message: "AI filtered products.",
-        products,
-       })
-})
+    res.status(200).json({
+      success: success ?? true,
+      message: "AI filtered products.",
+      products: products || candidateProducts,
+    });
+});
 

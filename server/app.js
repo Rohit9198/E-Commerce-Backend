@@ -10,10 +10,17 @@ import productRouter from "./router/productRoutes.js";
 import adminRouter from "./router/adminRoutes.js";
 import orderRouter from "./router/orderRoutes.js";
 import database from "./database/db.js";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 
-config({path: "./config/config.env"});
+config({ path: path.join(__dirname, "config/config.env") });
+config({ path: "./config/config.env" });
+config({ path: "./server/config/config.env" });
 
 
 const allowedOrigins = [

@@ -82,9 +82,13 @@ export const deleteReview = createAsyncThunk(
 
 export const fetchProductWithAI = createAsyncThunk(
   "product/ai-search", 
-  async (userPrompt, thunkAPI) => {
+  async (promptPayload, thunkAPI) => {
     try {
-      const res = await axiosInstance.post(`/product/ai-search`, userPrompt);
+      const userPrompt =
+        typeof promptPayload === "string"
+          ? promptPayload.trim()
+          : promptPayload?.userPrompt || promptPayload?.prompt || "";
+      const res = await axiosInstance.post(`/product/ai-search`, { userPrompt });
       thunkAPI.dispatch(toggleAIModal());
       return res.data;
     } catch (error) {
@@ -162,9 +166,10 @@ const productSlice = createSlice({
       state.aiSearching= true;
     })
     .addCase(fetchProductWithAI.fulfilled,(state, action) => {
-      state.aiSearching= false;
-      state.products = action.payload.products;
-      state.totalProducts = action.payload.products.length;
+      state.aiSearching = false;
+      const prods = Array.isArray(action.payload?.products) ? action.payload.products : [];
+      state.products = prods;
+      state.totalProducts = prods.length;
     })
     .addCase(fetchProductWithAI.rejected,(state) => {
       state.aiSearching= false;

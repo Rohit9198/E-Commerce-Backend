@@ -1,30 +1,40 @@
 import React, { useState } from "react";
 import { X, Search, Sparkles } from "lucide-react";
-import axios from "axios";
 import { useDispatch, useSelector } from "react-redux";
-import fetchProductWithAI from "../../store/slices/productSlice"
+import { fetchProductWithAI } from "../../store/slices/productSlice";
 import { toggleAIModal } from "../../store/slices/popupSlice";
+
+const exampleText = [
+  "A wireless headphone with good bass",
+  "Cotton baby romper for summer",
+  "Mechanical gaming keyboard",
+  "High performance dash camera",
+];
 
 const AISearchModal = () => {
   const [userPrompt, setUserPrompt] = useState("");
-  const {aiSearching} = useSelector((state) => state.product);
-  const {isAIPopupOpen} = useSelector((state) => state.popup);
+  const { aiSearching } = useSelector((state) => state.product);
+  const { isAIPopupOpen } = useSelector((state) => state.popup);
   const dispatch = useDispatch();
-  const handleSearch = (e)=>{
-    e.preventDefault();
-    dispatch(fetchProductWithAI(userPrompt));
-  };
-  if(!isAIPopupOpen) return null;
 
- return (
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (!userPrompt.trim()) return;
+    dispatch(fetchProductWithAI({ userPrompt: userPrompt.trim() }));
+  };
+
+  if (!isAIPopupOpen) return null;
+
+  return (
     <div
       className="fixed inset-0 bg-black/50 backdrop-blur-sm 
     z-50 flex items-center justify-center p-4"
-    onClick={() => dispatch(toggleAIModal())}
+      onClick={() => dispatch(toggleAIModal())}
     >
       <div
         className="bg-background/95 backdrop-blur-md border 
       border-border rounded-2xl p-8 w-full max-w-2xl"
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
