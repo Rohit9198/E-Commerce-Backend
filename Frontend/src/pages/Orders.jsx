@@ -17,10 +17,12 @@ import {
   Check,
   ShoppingBag,
   RotateCcw,
+  Trash2,
+  AlertTriangle,
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
-import { fetchMyOrders } from "../store/slices/orderSlice";
+import { fetchMyOrders, deletePendingOrder } from "../store/slices/orderSlice";
 import { toggleAuthPopup } from "../store/slices/popupSlice";
 import { toast } from "react-toastify";
 
@@ -29,14 +31,15 @@ const Orders = () => {
   const navigate = useNavigate();
 
   const { authUser } = useSelector((state) => state.auth);
-  const { myOrders, fetchingOrders } = useSelector(
-    (state) => state.order || { myOrders: [], fetchingOrders: false }
+  const { myOrders, fetchingOrders, deletingOrder } = useSelector(
+    (state) => state.order || { myOrders: [], fetchingOrders: false, deletingOrder: false }
   );
 
   const [selectedFilter, setSelectedFilter] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedOrders, setExpandedOrders] = useState({});
   const [copiedId, setCopiedId] = useState(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
   useEffect(() => {
     if (authUser) {
@@ -56,6 +59,17 @@ const Orders = () => {
     setCopiedId(id);
     toast.info("Order ID copied to clipboard!");
     setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleCancelOrder = (orderId) => {
+    setConfirmDeleteId(orderId);
+  };
+
+  const handleConfirmCancel = () => {
+    if (confirmDeleteId) {
+      dispatch(deletePendingOrder(confirmDeleteId));
+      setConfirmDeleteId(null);
+    }
   };
 
   const getStatusBadge = (status) => {
@@ -190,6 +204,43 @@ const Orders = () => {
 
   return (
     <div className="min-h-screen pt-24 pb-20 bg-background">
+      {/* CONFIRM CANCEL MODAL */}
+      {confirmDeleteId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
+          <div className="glass-card max-w-sm w-full p-6 rounded-2xl border border-border/60 shadow-2xl">
+            <div className="w-12 h-12 rounded-xl bg-rose-500/10 text-rose-500 flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+            <h3 className="text-lg font-bold text-foreground text-center mb-1">
+              Cancel Order?
+            </h3>
+            <p className="text-sm text-muted-foreground text-center mb-6">
+              This will permanently delete your pending order. This action cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmDeleteId(null)}
+                className="flex-1 py-2.5 rounded-xl border border-border/60 text-sm font-semibold text-foreground hover:bg-secondary transition-all"
+              >
+                Keep Order
+              </button>
+              <button
+                onClick={handleConfirmCancel}
+                disabled={deletingOrder}
+                className="flex-1 py-2.5 rounded-xl bg-rose-500 text-white text-sm font-semibold hover:bg-rose-600 transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+              >
+                {deletingOrder ? (
+                  <RotateCcw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Trash2 className="w-4 h-4" />
+                )}
+                Yes, Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         {/* HEADER SECTION */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
@@ -333,6 +384,7 @@ const Orders = () => {
                 : [];
               const shipping = order.shipping_info || {};
               const progressStep = getOrderProgressStep(order.order_status);
+              const isPaymentPending = !order.paid_at;
 
               return (
                 <div
@@ -380,7 +432,7 @@ const Orders = () => {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3">
                       <div className="text-right">
                         <p className="text-[11px] text-muted-foreground">
                           Total Amount
@@ -389,6 +441,19 @@ const Orders = () => {
                           ${Number(order.total_price || 0).toFixed(2)}
                         </p>
                       </div>
+
+                      {/* Cancel button — only for payment-pending orders */}
+                      {isPaymentPending && (
+                        <button
+                          onClick={() => handleCancelOrder(order.id)}
+                          disabled={deletingOrder}
+                          title="Cancel this pending order"
+                          className="p-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 border border-rose-500/20 transition-all flex items-center gap-1 text-xs font-medium disabled:opacity-60"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          <span className="hidden sm:inline">Cancel</span>
+                        </button>
+                      )}
 
                       <button
                         onClick={() => toggleExpand(order.id)}

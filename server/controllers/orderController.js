@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import ErrorHandler from "../middlewares/errorMiddleware.js"; 
 import { catchAsyncError } from "../middlewares/catchAsyncError.js";
 import database from "../database/db.js";
@@ -124,8 +125,85 @@ export const placeNewOrder = catchAsyncError(async(req, res, next) =>{
      message: "Order placed successfully. Please proceed to payment.",
      paymentIntent: paymentResponse.clientSecret,
      total_price,
+     orderId,
    });
  });
+
+export const verifyPayment = catchAsyncError(async (req, res, next) => {
+  const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+
+  if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+    return next(
+      new ErrorHandler("Payment verification failed. Missing required payment parameters.", 400)
+    );
+  }
+
+  const keySecret = (process.env.RAZORPAY_KEY_SECRET || "73gcYAaRvCuWgT8HC84Hh1Vm").trim();
+  const generatedSignature = crypto
+    .createHmac("sha256", keySecret)
+    .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+    .digest("hex");
+
+  if (generatedSignature !== razorpay_signature) {
+    console.error("Signature verification failed:", {
+      generatedSignature,
+      receivedSignature: razorpay_signature,
+      razorpay_order_id,
+      razorpay_payment_id,
+    });
+    return next(new ErrorHandler("Invalid payment signature. Verification failed.", 400));
+  }
+
+  // Update payment record in database
+  const paymentTableUpdateResult = await database.query(
+    `UPDATE payments SET payment_status = $1 WHERE payment_intent_id = $2 RETURNING *`,
+    ["Paid", razorpay_order_id]
+  );
+
+  let orderId = null;
+  if (paymentTableUpdateResult.rows.length > 0) {
+    orderId = paymentTableUpdateResult.rows[0].order_id;
+  } else {
+    const existing = await database.query(
+      `SELECT * FROM payments WHERE payment_intent_id = $1`,
+      [razorpay_order_id]
+    );
+    if (existing.rows.length > 0) {
+      orderId = existing.rows[0].order_id;
+    }
+  }
+
+  if (orderId) {
+    // Mark order as paid
+    await database.query(
+      `UPDATE orders SET paid_at = NOW() WHERE id = $1 RETURNING *`,
+      [orderId]
+    );
+
+    // Deduct stock for each item in the order
+    try {
+      const { rows: orderedItems } = await database.query(
+        `SELECT product_id, quantity FROM order_items WHERE order_id = $1`,
+        [orderId]
+      );
+
+      for (const item of orderedItems) {
+        await database.query(
+          `UPDATE products SET stock = GREATEST(0, stock - $1) WHERE id = $2`,
+          [item.quantity, item.product_id]
+        );
+      }
+    } catch (stockErr) {
+      console.error("Stock update error:", stockErr);
+    }
+  }
+
+  res.status(200).json({
+    success: true,
+    message: "Payment verified and order finalized successfully.",
+    orderId: orderId || razorpay_order_id,
+  });
+});
 
 export const fetchSingleOrder = catchAsyncError(async( req, res, next) =>{
     const { orderId } = req.params;
@@ -288,3 +366,59 @@ res.status(200).json({
     order: results.rows[0],
 })
 })
+
+export const deletePendingOrder = catchAsyncError(async (req, res, next) => {
+  const { orderId } = req.params;
+  const userId = req.user.id;
+
+  // Validate UUID format early to avoid DB errors
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(orderId)) {
+    return next(new ErrorHandler("Invalid order ID format.", 400));
+  }
+
+  // Confirm order belongs to this user and payment is still Pending
+  const orderCheck = await database.query(
+    `SELECT o.id, o.paid_at, p.payment_status
+     FROM orders o
+     LEFT JOIN payments p ON p.order_id = o.id
+     WHERE o.id = $1 AND o.buyer_id = $2`,
+    [orderId, userId]
+  );
+
+  if (orderCheck.rows.length === 0) {
+    return next(new ErrorHandler("Order not found or access denied.", 404));
+  }
+
+  const { payment_status, paid_at } = orderCheck.rows[0];
+
+  // Block deletion if the order is already paid
+  if (payment_status === "Paid" || paid_at !== null) {
+    return next(
+      new ErrorHandler(
+        "Cannot delete a paid order. Please contact support.",
+        400
+      )
+    );
+  }
+
+  // All child tables have ON DELETE CASCADE, so deleting orders is enough.
+  // Explicit deletes are kept for safety in case CASCADE was not applied retroactively.
+  await database.query(`DELETE FROM payments WHERE order_id = $1`, [orderId]);
+  await database.query(`DELETE FROM order_items WHERE order_id = $1`, [orderId]);
+  await database.query(`DELETE FROM shipping_info WHERE order_id = $1`, [orderId]);
+  const result = await database.query(
+    `DELETE FROM orders WHERE id = $1 RETURNING *`,
+    [orderId]
+  );
+
+  if (result.rows.length === 0) {
+    return next(new ErrorHandler("Order could not be deleted. Please try again.", 500));
+  }
+
+  res.status(200).json({
+    success: true,
+    message: "Pending order cancelled and deleted successfully.",
+    order: result.rows[0],
+  });
+});
