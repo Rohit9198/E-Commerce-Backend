@@ -1,8 +1,13 @@
 import pkg from "pg";
 const { Client } = pkg;
 import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 
-dotenv.config({ path: "./config/config.env" });
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+dotenv.config({ path: path.join(__dirname, "../config/config.env") });
 
 const database = new Client({
     user: process.env.DB_USER || "postgres",

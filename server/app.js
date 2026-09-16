@@ -19,8 +19,6 @@ const __dirname = path.dirname(__filename);
 const app = express();
 
 config({ path: path.join(__dirname, "config/config.env") });
-config({ path: "./config/config.env" });
-config({ path: "./server/config/config.env" });
 
 
 const allowedOrigins = [
