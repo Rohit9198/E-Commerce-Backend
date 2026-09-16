@@ -8,6 +8,7 @@ import {
   Loader,
   Heart,
   Share2,
+  ArrowLeft,
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import ReviewsContainer from "../components/Products/ReviewsContainer";
@@ -135,6 +136,17 @@ const ProductDetail = () => {
   return (
     <div className="min-h-screen pt-24 pb-20 bg-background">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
+        {/* TOP BACK TO PRODUCTS BUTTON */}
+        <div className="mb-6">
+          <button
+            onClick={() => navigate("/products")}
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-border/70 bg-secondary/50 hover:bg-secondary text-sm font-medium text-foreground hover:border-primary/50 transition-all group shadow-sm"
+          >
+            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform text-muted-foreground group-hover:text-primary" />
+            <span>Back to Products</span>
+          </button>
+        </div>
+
         {/* MAIN PRODUCT ROW */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start mb-12">
           {/* LEFT: IMAGE GALLERY */}

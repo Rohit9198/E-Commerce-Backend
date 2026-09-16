@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
-import { X, LogOut, Upload, Eye, EyeOff } from "lucide-react";
+import { X, LogOut, Upload, Eye, EyeOff, Package } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { logout, updateProfile, updatePassword } from "../../store/slices/authSlice";
 import { toggleAuthPopup } from "../../store/slices/popupSlice";
 
 const ProfilePanel = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { isAuthPopupOpen } = useSelector((state) => state.popup);
   const { authUser, isUpdatingProfile, isUpdatingPassword } = useSelector(
     (state) => state.auth
@@ -80,7 +82,19 @@ const ProfilePanel = () => {
             <h3 className="text-lg font-semibold text-foreground">
               {authUser?.name}
             </h3>
-            <p className="text-muted-foreground">{authUser?.email}</p>
+            <p className="text-muted-foreground text-sm mb-4">{authUser?.email}</p>
+
+            {/* QUICK LINK TO MY ORDERS */}
+            <button
+              onClick={() => {
+                dispatch(toggleAuthPopup());
+                navigate("/orders");
+              }}
+              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 text-sm font-semibold transition-all"
+            >
+              <Package className="w-4 h-4" />
+              <span>View My Orders</span>
+            </button>
           </div>
 
           {/* PROFILE UPDATE FORM */}
