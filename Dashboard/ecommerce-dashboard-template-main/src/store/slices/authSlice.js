@@ -1,6 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
-import axios from "axios";
-import { axiosInstance } from "../../../../../Frontend/src/lib/axios";
+import { axiosInstance } from "../../lib/axios";
+import { toast } from "react-toastify";
 
 const authSlice = createSlice({
   name: "auth",
@@ -97,12 +97,12 @@ export const login = (data) => async (dispatch) => {
   dispatch(authSlice.actions.loginRequest());
   try {
     await axiosInstance.post("/auth/login", data).then((res) => {
-      if (res.data.user.role === "admin") {
+      if (res.data.user?.role?.toLowerCase() === "admin") {
         dispatch(authSlice.actions.loginSuccess(res.data.user));
         toast.success(res.data.message);
       } else {
         dispatch(authSlice.actions.loginFailed());
-        toast.error(res.data.message);
+        toast.error("Access denied. Only Admins can access this dashboard.");
       }
     });
   } catch (error) {
@@ -111,26 +111,24 @@ export const login = (data) => async (dispatch) => {
   }
 };
 export const getUser = () => async (dispatch) => {
-  dispatch(authSlice.actions.loginRequest());
+  dispatch(authSlice.actions.getUserRequest());
   try {
-    await axiosInstance.get("auth/me").then((res) => {
-      dispatch(authSlice.actions.getUserSuccess(res, data.user));
-    });
+    const res = await axiosInstance.get("/auth/me");
+    dispatch(authSlice.actions.getUserSuccess(res.data.user));
   } catch (error) {
     dispatch(authSlice.actions.getUserFailed());
   }
 };
 export const logout = () => async (dispatch) => {
-  dispatch(authSlice.actions.loginout());
+  dispatch(authSlice.actions.logoutRequest());
   try {
-    await axiosInstance.get("auth/logout").then((res) => {
-      dispatch(authSlice.actions.logoutSuccess());
-      toast.success(res.data.message);
-      dispatch(authSlice.actions.resetAuthSlice());
-    });
+    const res = await axiosInstance.get("/auth/logout");
+    dispatch(authSlice.actions.logoutSuccess());
+    toast.success(res.data.message);
+    dispatch(authSlice.actions.resetAuthSlice());
   } catch (error) {
-    dispatch(authSlice.actions.getUserFailed());
-    toast.error(error.response.data.message || "Logout Failed");
+    dispatch(authSlice.actions.logoutFailed());
+    toast.error(error.response?.data?.message || "Logout Failed");
     dispatch(authSlice.actions.resetAuthSlice());
   }
 };

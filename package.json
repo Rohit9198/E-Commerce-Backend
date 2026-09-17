@@ -8,6 +8,8 @@
     "dev:server": "npm run dev --prefix server",
     "dev:client": "npm run dev --prefix Frontend",
     "build:client": "npm run build --prefix Frontend",
+    "dev:dashboard": "npm run dev --prefix Dashboard/ecommerce-dashboard-template-main",
+    "build:dashboard": "npm run build --prefix Dashboard/ecommerce-dashboard-template-main",
     "start": "npm start --prefix server",
     "seed": "npm run seed --prefix server"
   },
