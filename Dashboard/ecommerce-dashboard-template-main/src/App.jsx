@@ -4,13 +4,44 @@ import {
   Route,
   Navigate,
 } from "react-router-dom";
-import SideBar from "./components/SideBar";
+
 import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import { ToastContainer } from "react-toastify";
+import { useSelector } from "react-redux";
+import SideBar from "./components/SideBar";
+import Dashboard from "./components/Dashboard";
+import Orders from "./components/Orders";
+import Products from "./components/Products";
+import Profile from "./components/Profile";
+import Users from "./components/Users";
 
 function App() {
+  const { openedComponent } = useSelector((state) => state.extra);
+  const {user, isAuthenticated} = useSelector((state) => state.auth);
+
+  const renderDashboardContent = () => {
+    switch (openedComponent) {
+      case "Dashboard":
+        <Dashboard />;
+        break;
+      case "Orders":
+        <Orders />;
+        break;
+      case "Users":
+        <Users />;
+        break;
+      case "Profile":
+        <Profile />;
+        break;
+      case "Products":
+        <Products />;
+        break;
+     default:
+      return <Dashboard/>;
+    }
+  };
 
   return (
     <Router>
@@ -18,7 +49,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/password/forgot" element={<ForgotPassword />} />
         <Route path="/password/reset/:token" element={<ResetPassword />} />
-        
+
         {/* Protected Admin Route */}
         <Route
           path="/"
