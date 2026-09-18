@@ -21,33 +21,37 @@ import { getUser } from "./store/slices/authSlice";
 
 function App() {
   const { openedComponent } = useSelector((state) => state.extra);
-  const {user, isAuthenticated} = useSelector((state) => state.auth);
+  const { user, isAuthenticated, isAuthChecked } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
+
   useEffect(() => {
-      dispatch(getUser());
-  },[]);
+    dispatch(getUser());
+  }, [dispatch]);
 
   const renderDashboardContent = () => {
     switch (openedComponent) {
       case "Dashboard":
-        <Dashboard />;
-        break;
+        return <Dashboard />;
       case "Orders":
-        <Orders />;
-        break;
+        return <Orders />;
       case "Users":
-        <Users />;
-        break;
+        return <Users />;
       case "Profile":
-        <Profile />;
-        break;
+        return <Profile />;
       case "Products":
-        <Products />;
-        break;
-     default:
-      return <Dashboard/>;
+        return <Products />;
+      default:
+        return <Dashboard />;
     }
   };
+
+  if (!isAuthChecked) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   return (
     <Router>
@@ -60,10 +64,12 @@ function App() {
         <Route
           path="/"
           element={
-            isAuthenticated && user?.role === "Admin" ? (
-              <div className="flex min-h-screen">
+            isAuthenticated && user?.role?.toLowerCase() === "admin" ? (
+              <div className="flex min-h-screen bg-gray-50 overflow-hidden">
                 <SideBar />
-                {renderDashboardContent()}
+                <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
+                  {renderDashboardContent()}
+                </div>
               </div>
             ) : (
               <Navigate to="/login" replace />
@@ -71,7 +77,7 @@ function App() {
           }
         />
       </Routes>
-      <ToastContainer theme="dark" />
+      <ToastContainer theme="dark" position="top-right" autoClose={3000} />
     </Router>
   );
 }

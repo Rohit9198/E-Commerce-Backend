@@ -5,7 +5,8 @@ import { toast } from "react-toastify";
 const authSlice = createSlice({
   name: "auth",
   initialState: {
-    loading: false,
+    loading: true,
+    isAuthChecked: false,
     user: null,
     isAuthenticated: false,
   },
@@ -15,22 +16,26 @@ const authSlice = createSlice({
     },
     loginSuccess(state, action) {
       state.loading = false;
+      state.isAuthChecked = true;
       state.user = action.payload;
       state.isAuthenticated = true;
     },
     loginFailed(state) {
       state.loading = false;
+      state.isAuthChecked = true;
     },
     getUserRequest(state) {
       state.loading = true;
     },
     getUserSuccess(state, action) {
       state.loading = false;
+      state.isAuthChecked = true;
       state.user = action.payload;
       state.isAuthenticated = true;
     },
     getUserFailed(state) {
       state.loading = false;
+      state.isAuthChecked = true;
       state.user = null;
       state.isAuthenticated = false;
     },
