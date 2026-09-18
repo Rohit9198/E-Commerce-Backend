@@ -102,10 +102,15 @@ export const forgotpassword = catchAsyncError(async (req, res, next) => {
             message: `Email sent to ${user.email} successfully.`,
         });
     } catch (error) {
-        console.log("Email delivery error, but reset token generated:", resetPasswordUrl);
+        console.error("Email delivery failed:", error.message || error);
+        console.log("\n========================================================");
+        console.log("🔐 PASSWORD RESET LINK (COPY & OPEN IN BROWSER):");
+        console.log(resetPasswordUrl);
+        console.log("========================================================\n");
         res.status(200).json({
             success: true,
-            message: `Reset link created for ${user.email}. Check server console if email fails.`,
+            message: `Reset link created for ${user.email}. Check server terminal if email is not received.`,
+            resetPasswordUrl,
         });
     }
 });

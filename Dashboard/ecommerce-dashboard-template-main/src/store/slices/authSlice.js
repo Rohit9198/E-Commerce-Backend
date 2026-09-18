@@ -96,18 +96,17 @@ const authSlice = createSlice({
 export const login = (data) => async (dispatch) => {
   dispatch(authSlice.actions.loginRequest());
   try {
-    await axiosInstance.post("/auth/login", data).then((res) => {
-      if (res.data.user?.role?.toLowerCase() === "admin") {
-        dispatch(authSlice.actions.loginSuccess(res.data.user));
-        toast.success(res.data.message);
-      } else {
-        dispatch(authSlice.actions.loginFailed());
-        toast.error("Access denied. Only Admins can access this dashboard.");
-      }
-    });
+    const res = await axiosInstance.post("/auth/login", data);
+    if (res.data.user?.role?.toLowerCase() === "admin") {
+      dispatch(authSlice.actions.loginSuccess(res.data.user));
+      toast.success(res.data.message);
+    } else {
+      dispatch(authSlice.actions.loginFailed());
+      toast.error("Access denied. Only Admins can access this dashboard.");
+    }
   } catch (error) {
     dispatch(authSlice.actions.loginFailed());
-    toast.error(error.response.data.message || "Login Failed");
+    toast.error(error.response?.data?.message || error.message || "Login Failed");
   }
 };
 export const getUser = () => async (dispatch) => {
@@ -128,7 +127,7 @@ export const logout = () => async (dispatch) => {
     dispatch(authSlice.actions.resetAuthSlice());
   } catch (error) {
     dispatch(authSlice.actions.logoutFailed());
-    toast.error(error.response?.data?.message || "Logout Failed");
+    toast.error(error.response?.data?.message || error.message || "Logout Failed");
     dispatch(authSlice.actions.resetAuthSlice());
   }
 };
@@ -136,16 +135,14 @@ export const logout = () => async (dispatch) => {
 export const forgotPassword = (email) => async (dispatch) => {
   dispatch(authSlice.actions.forgotPasswordRequest());
   try {
-    await axiosInstance
-      .post("/auth/password/forgot?frontendUrl=http://localhost:5174", email)
-      .then((res) => {
-        dispatch(authSlice.actions.forgotPasswordSuccess());
-        toast.success(res.data.message);
-      });
+    const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost:5173";
+    const res = await axiosInstance.post(`/auth/password/forgot?frontendUrl=${encodeURIComponent(origin)}`, email);
+    dispatch(authSlice.actions.forgotPasswordSuccess());
+    toast.success(res.data.message);
   } catch (error) {
     dispatch(authSlice.actions.forgotPasswordFailed());
     toast.error(
-      error.response.data.message || "cannot request for reset password",
+      error.response?.data?.message || error.message || "Cannot request for reset password",
     );
   }
 };
@@ -153,33 +150,27 @@ export const forgotPassword = (email) => async (dispatch) => {
 export const resetPassword = (newData, token) => async (dispatch) => {
   dispatch(authSlice.actions.resetPasswordRequest());
   try {
-    await axiosInstance
-      .put(`/auth/password/reset/${token}`, newData)
-      .then((res) => {
-        dispatch(authSlice.actions.resetPasswordSuccess(res.data.user));
-        toast.success(res.data.message);
-      });
+    const res = await axiosInstance.put(`/auth/password/reset/${token}`, newData);
+    dispatch(authSlice.actions.resetPasswordSuccess(res.data.user));
+    toast.success(res.data.message);
   } catch (error) {
     dispatch(authSlice.actions.resetPasswordFailed());
     toast.error(
-      error.response.data.message || "Failed to reset password"
+      error.response?.data?.message || error.message || "Failed to reset password"
     );
   }
 };
 
 export const updateAdminProfile = (data) => async (dispatch) => {
-  dispatch(authSlice.actions.updatePasswordRequest());
+  dispatch(authSlice.actions.updateProfileRequest());
   try {
-    await axiosInstance
-      .put(`/auth/profile/update`, data)
-      .then((res) => {
-        dispatch(authSlice.actions.resetPasswordSuccess(res.data.user));
-        toast.success(res.data.message);
-      });
+    const res = await axiosInstance.put(`/auth/profile/update`, data);
+    dispatch(authSlice.actions.updateProfileSuccess(res.data.user));
+    toast.success(res.data.message);
   } catch (error) {
     dispatch(authSlice.actions.updateProfileFailed());
     toast.error(
-      error.response.data.message || "Failed to update profile"
+      error.response?.data?.message || error.message || "Failed to update profile"
     );
   }
 };
@@ -187,21 +178,18 @@ export const updateAdminProfile = (data) => async (dispatch) => {
 export const updateAdminPassword = (data) => async (dispatch) => {
   dispatch(authSlice.actions.updatePasswordRequest());
   try {
-    await axiosInstance
-      .put(`/auth/password/update`, data)
-      .then((res) => {
-        dispatch(authSlice.actions.updatePasswordSuccess());
-        toast.success(res.data.message);
-      });
+    const res = await axiosInstance.put(`/auth/password/update`, data);
+    dispatch(authSlice.actions.updatePasswordSuccess());
+    toast.success(res.data.message);
   } catch (error) {
     dispatch(authSlice.actions.updatePasswordFailed());
     toast.error(
-      error.response.data.message || "Failed to update password"
+      error.response?.data?.message || error.message || "Failed to update password"
     );
   }
 };
 
 export const resetAuthSlice = () => (dispatch) => {
   dispatch(authSlice.actions.resetAuthSlice());
-}
+};
 export default authSlice.reducer;
